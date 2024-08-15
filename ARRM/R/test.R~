@@ -1,0 +1,30 @@
+library(RTMB)
+source('helperFunctions.R')
+source('riverReachTS.R')
+
+
+
+VSinfo<-read.table('/home/karina/projects/DEMETRAS/data/DEMETRASVS2/reachdata/VSinfo_Pia_nza.dat',header=TRUE)
+VS<-VSinfo$dist
+VSname<-VSinfo$myname
+
+dat<-read.table('/home/karina/projects/DEMETRAS/data/DEMETRASVS2/reachdata/Pia_nza.dat',header=TRUE)
+plot(dat$dist,dat$height,col=dat$satid)
+
+id<-which(dat$time > 2016)
+dat<-dat[id,]
+id<-which(!is.na(dat$height))
+dat<-dat[id,]
+mysd<-sd(dat$height)
+id<-which(dat$height > dat$wse-3*mysd & dat$height< dat$wse+3*mysd)
+dat<-dat[id,]
+plot(dat$dist,dat$height,col=dat$satid)
+
+
+
+fit<-riverReachTS(dat, VS=VS,tdim=600,xdim=30,Nknot=10,nit=5,cutp=0.05)
+
+
+
+
+
