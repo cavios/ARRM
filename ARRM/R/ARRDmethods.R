@@ -7,7 +7,7 @@ getProjUTM<-function(x,y){
     myProj
 }
 
-
+dist2<-function(v, w)(v[1] - w[1])^2 + (v[2] - w[2])^2
 getdist<-function(v, w)sqrt((v[1] - w[1])^2 + (v[2] - w[2])^2)
 getdist2<-function(v, w)sqrt((v[1] - w[,1])^2 + (v[2] - w[,2])^2)
 
@@ -42,24 +42,48 @@ doone2<-function(xydat,xy,mydistm1){
 }
 
 
+##' Converts SWOT data to ARRD format.
+##' @param swot RiverSP SWOT data
+##' @param addChainage if TRUE chainage information will be added
+##' @param CL if addChaimage=TRUE a centerline must be provided
+##' @import lubridate 
+##' @examples
+##'out<-SWOT2AARD(swot,addChainage=TRUE,CL=CL)
+##' @export
 
+SWOT2AARD<-function(swot,addChainage=FALSE,CL=NULL){
+    mydate<-substr(swot$time_str,1,10)
+    date <- ymd(mydate)
+    decYear<-decimal_date(date) # 2009.11
+    dat<-cbind(swot,decYear)
 
-
+    if(addChainage)dat<-addChainage(dat,CL)
+    o<-order(dat$decYear)
+    dat<-dat[o,]
+    out<-data.frame(timesec=dat$time, time=dat$decYear,  lat=dat$lat, lon=dat$lon, height=dat$wse, distnode=NA, width=dat$p_width, reachID=dat$reach_id, nodeID=dat$node_id, wse=dat$p_wse, OCval=NA, satid=12)
+    if(addChainage){
+        chainage<-dat$chainage
+        out<-cbind(out,chainage)
+    }
+    out
+}
 
 ##' Project altimetry data to the river centerline.
 ##' access to a basin sqlite file. Basin sqlite files can be acessed from ...  
-##' @param datLL a matrix/dataframe with data coordinates (lon,lat)  
-##' @param centerlineLL a matrix/dataframe with centerline coordinates (lon,lat)  
+##' @param dat an oject of the function getAltReaches or a data.frame that contains at least a column with latitude and longitude named "lat" and "lon", respectively.  
+##' @param centerline an object from the function extractCL or matrix/dataframe with centerline coordinates of latitude and longitude named "y" and "x", respectively.     
 ##' @importFrom terra vect
 ##' @importFrom terra project
+##' @importFrom terra crds
 ##' @examples
-##' distt<-projectToCenterline(datLL,centerlineLL)
-##' out<-getAltReaches(dbfile,mybasin,myreaches)
+##'out<-projectToCenterline(dat,centerline)
 ##' @export
 
-projectToCenterline<-function(datLL,centerLineLL){
+addChainage<-function(dat,centerline){
+    datLL<-cbind(dat$lon,dat$lat)
+    centerLineLL<-cbind(centerline$x,centerline$y)
    #transform data to UTM coordinates
-    myProj<-getProjUTM(centerlineLL[,1], centerlineLL[,2])
+    myProj<-getProjUTM(centerLineLL[,1], centerLineLL[,2])
     v <- vect(datLL, crs="+proj=longlat")
     u <- terra::project(v, myProj)
     xydat <- crds(u)
@@ -123,7 +147,9 @@ projectToCenterline<-function(datLL,centerLineLL){
         MyPos[i,5]<-distTOT
         
     }
-    return(MyPos)
+    chainage<-MyPos[,5]
+    out<-cbind(dat,chainage)
+    return(out)
 }
 
 
@@ -143,6 +169,9 @@ getOneReach<-function(mydb,myreach,mybasin){
 ##' @param dbfile a particular basin sqlite file e.g. "7428.sqlite". The basin number is the HydroShed level 4 PFAF_ID 
 ##' @param mybasin HydroShed basin PFAF_ID (level 4) 
 ##' @param myReaches a vector with SWORD reach numbers
+##' @param addFilter =FALSE, if TRUE only observation with a node distanstance smaller than the width of the river is returned
+##' @param addBuffer =NULL, if a value is specified only observation with a node distanstance smaller than the width of the river + (-) addBuffer is returned
+##' @param removeNA = TRUE, remove rows where the elevation is NA
 ##' @import DBI
 ##' @import RSQLite
 ##' @examples
@@ -152,11 +181,22 @@ getOneReach<-function(mydb,myreach,mybasin){
 ##' out<-getAltReaches(dbfile,mybasin,myreaches)
 ##' @export
 
-getAltReaches<-function(dbfile,mybasin,myreaches){
+getAltReaches<-function(dbfile,mybasin,myreaches,addFilter=FALSE,addBuffer=NULL,removeNA=TRUE){
     mydb <- dbConnect(RSQLite::SQLite(), dbfile)
     out<-lapply(1:length(myreaches),function(i){cat('doing ',i,'\n');getOneReach(mydb,myreaches[i],mybasin)})
     out<-do.call(rbind,out)
     dbDisconnect(mydb)
+    if(removeNA){
+        id<-which(!is.na(out$height))
+        out<-out[id,]
+    }
+    if(addFilter){
+        id<-which(out$distnode < out$width)
+        if(!is.null(addBuffer)){
+            id<-which(out$distnode < out$width+addBuffer)
+        }
+        out<-out[id,]
+    }
     out
 }
 

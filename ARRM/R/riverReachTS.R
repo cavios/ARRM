@@ -60,12 +60,12 @@ f<-function(param){
 riverReachTS<-function(dat, VS=NULL,tdim=NULL,xdim=20,Nknot=10,nit=5,cutp=0.05 ){
 
 #prepare data
-    dis<- round(diff(range(dat$dist)))
+    dis<- round(diff(range(dat$chainage)))
     dat$satid<-as.integer(as.factor(dat$satid))
     o<-order(dat$time)
     dato<-dat[o,]
 
-    startH<-mean(dato$height[order(dato$dist)[1:100]])
+    startH<-mean(dato$height[order(dato$chainage)[1:100]])
     if(is.null(tdim)){
         mtime<-round(mean(diff(unique(dato$time))*365),0)
         tdim<-round(diff(range(dat$time))*365/mtime,0)
@@ -76,14 +76,14 @@ riverReachTS<-function(dat, VS=NULL,tdim=NULL,xdim=20,Nknot=10,nit=5,cutp=0.05 )
     
 
     tidx <- assignPretty(dato$time, tdim)
-    xidx <- assignPretty(dato$dist, xdim)
+    xidx <- assignPretty(dato$chainage, xdim)
     gid <- assignPretty(VS, xdim)$ct
     x<-xidx$xx
     y<-tidx$xx
 
 
-    myrange<-range(dato$dist)
-    xrange<-range(dato$dist)/xdim
+    myrange<-range(dato$chainage)
+    xrange<-range(dato$chainage)/xdim
     xknot<-seq(myrange[1],myrange[2],length=Nknot)
 
     data<-list(H=dato$height,
@@ -92,7 +92,7 @@ riverReachTS<-function(dat, VS=NULL,tdim=NULL,xdim=20,Nknot=10,nit=5,cutp=0.05 )
            dfield=xidx$xx,
            satid=dato$satid,
            w=0*dato$height+1,
-           dist=dato$dist,
+           dist=dato$chainage,
            xknot=xknot,
            VS=VS,
            gid=gid)
