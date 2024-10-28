@@ -150,6 +150,7 @@ riverReachTS<-function(dat, VS=NULL,tdim=NULL,xdim=20,Nknot=10,nit=5,cutp=0.05 )
 
     myts<-data.frame(time=y,H=ts,Hsd=tssd)
     out<-list(x=x,y=y,eta=pl$eta,etasd=plsd$eta,tsVS=myts)
+    class(out)<-"ARRM"
     return(out)
 }
 
@@ -160,22 +161,77 @@ riverReachTS<-function(dat, VS=NULL,tdim=NULL,xdim=20,Nknot=10,nit=5,cutp=0.05 )
 ##' @param dat The raw water level data can be added to the plot. 
 ##' @param ... Additional argumants to plot
 ##' @importFrom fields image.plot
+##' @import viridis
 ##' @keywords plot
 ##' @export
 
-plot.ARRM<-function(fit,dat=NULL){
+plot.ARRM<-function(fit,dat=NULL,doSave=FALSE, type="F",...){
     x<-fit$x
     y<-fit$y
     eta<-fit$eta
     tsvs<-fit$tsVS
     myrange<-range(c(tsvs$H+2*tsvs$Hsd,tsvs$H-2*tsvs$Hsd))
+    if(doSave){pdf('myfield.pdf',12,10)}
     par(mfrow=c(2,1),mar=c(4,4,1,1))
-    image.plot(y,x,eta,xlab='Time in decimal years',ylab='Reach centerline distance [m]')
+    image.plot(y,x,eta,xlab='Time in decimal years',ylab='Reach centerline distance [m]',col=viridis::turbo(50))
     plot(tsvs$time,tsvs$H,t='l',col='blue',lwd=5,ylim=myrange,xlab='Time in decimal years',ylab='Elevations w.r.t. EGM2008')
+    
+    mypoly<-list()
+    mypoly$x<-c(y,rev(y))
+    mypoly$y<-c(tsvs$H-2*tsvs$Hsd,rev(tsvs$H+2*tsvs$Hsd))
+    polygon(mypoly,col='azure2',border=NA)
+    lines(tsvs$time,tsvs$H,col='blue4',lwd=3)
+    #lines(tsvs$time,tsvs$H+2*tsvs$Hsd,t='l',col='gray',lwd=1,lty=1)
+    #lines(tsvs$time,tsvs$H-2*tsvs$Hsd,t='l',col='gray',lwd=1,lty=1)
     if(!is.null(dat)){
         points(dat$time,dat$height,col='gray',pch=dat$satid)
-        lines(tsvs$time,tsvs$H,col='blue',lwd=5)
+        lines(tsvs$time,tsvs$H,col='blue4',lwd=5)
     }
-    lines(tsvs$time,tsvs$H+2*tsvs$Hsd,t='l',col='blue',lwd=2,lty=2)
-    lines(tsvs$time,tsvs$H-2*tsvs$Hsd,t='l',col='blue',lwd=2,lty=2)
+
+    if(doSave){dev.off()}
 }
+
+
+##' Plot timeseries of an object returned by the function riverReachTS()
+##' @param fit Object returned by get.TS()
+##' @param dat The raw water level data can be added to the plot. 
+##' @param ... Additional argumants to plot
+##' @importFrom fields image.plot
+##' @import viridis
+##' @keywords plot
+##' @export
+
+TSplot<-function(fit,dat=NULL,...){
+    x<-fit$x
+    y<-fit$y
+    eta<-fit$eta
+    nc=length(x)
+    matplot(y,eta,t='l',col=viridis::viridis(nc),lty=1,xlab='Time in decimal years',ylab='Surface elevation w.r.t. EGM2008',...)
+    if(!is.null(dat)){
+        points(dat$time,dat$height,col='gray',pch=dat$satid)
+        
+    }
+}
+
+
+
+plotProfile<-function(fit){
+    x<-fit$x
+    y<-fit$y
+    eta<-fit$eta
+    nc=length(x)
+    matplot(x/1000,t(eta),t='l',col=viridis::viridis(nc),lty=1,xlab='chainage km',ylab='Surface elevation w.r.t. EGM2008')
+}
+
+
+plotDat<-function(dat){
+
+    par(mfrow=c(2,2))
+    mycol <- viridis::viridis(50)[as.numeric(cut(dat$height,breaks = 50))]
+    plot(dat$lon,dat$lat,col=mycol,pch=16,xlab='Longitude',ylab='Latitude')
+    plot(dat$chainage/1000,dat$height,col=dat$satid,xlab='Chainage km',ylab='Elevation w.r.t. EHM2008')
+    plot(dat$time,dat$chainage/1000,col=mycol,xlab='Time in decimal years',ylab='Chainage km')
+    
+}
+
+
