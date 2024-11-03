@@ -219,6 +219,46 @@ getReachInfo<-function(thisreach,path2sword,SWORDv){
 }
 
 
+getReachInfoDB<-function(thisreach,dbfile,myreach){
+    area<-substr(as.character(thisreach),1,1)
+    cont<-getSWORDcode(area)     
+    dbfile<-paste0(path2DB,'/',cont,'sqlite')
+    mydb <- dbConnect(RSQLite::SQLite(), dbfile)
+    myq<-paste0("SELECT * FROM nodeinfo"," WHERE reachid =" ,myreach)
+    myq<-paste0("SELECT * FROM nodeinfo WHERE reachid = ?", params = list(myreaches))
+    out<-dbGetQuery(mydb, "SELECT  * FROM nodeinfo WHERE reachid = ?", params = list(myreaches))
+
+    res <- dbSendQuery(mydb, myq)
+    out<-dbFetch(res)
+    dbClearResult(res)
+    dbDisconnect(mydb)
+    out
+}
+
+
+getReachInfo2<-function(dbfile,mybasin,myreaches,addFilter=FALSE,addBuffer=NULL,removeNA=TRUE){
+    mydb <- dbConnect(RSQLite::SQLite(), dbfile)
+    out<-lapply(1:length(myreaches),function(i){cat('doing ',i,'\n');getOneReach(mydb,myreaches[i],mybasin)})
+    out<-do.call(rbind,out)
+    dbDisconnect(mydb)
+    if(removeNA){
+        id<-which(!is.na(out$height))
+        out<-out[id,]
+    }
+    if(addFilter){
+        id<-which(out$distnode < out$width)
+        if(!is.null(addBuffer)){
+            id<-which(out$distnode < out$width+addBuffer)
+        }
+        out<-out[id,]
+    }
+    out
+}
+
+
+
+
+
 
 
 ##' Extract upstream and downstream reach id from the SWORD database (Alteneau et al., 2021) for a specific reach
@@ -270,9 +310,20 @@ extractCL<-function(myreaches,path2sword,SWORDv){
     out<-lapply(1:length(myreaches),function(i)getReachInfo(myreaches[o[i]],path2sword,SWORDv))
     out<-do.call(rbind,out)
     out<-fixCL(out,lim=300)
-    #o<-order(out$dist)
-    #out<-out[o,]
-    #out<-reOrder(out)
+    
+   out
+}
+
+
+extractCLDB<-function(myreaches,dbfile,lim=300){
+    mydb <- dbConnect(RSQLite::SQLite(), dbfile)
+    out<-dbGetQuery(mydb, "SELECT  * FROM nodeinfo WHERE reachid = ?", params = list(myreaches))
+    dbDisconnect(mydb)
+    out<-fixCL(out,lim=lim)
     out
 }
+
+
+
+
 
