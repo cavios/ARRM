@@ -1,4 +1,21 @@
-
+SWORD2RSQLite<-function(cont,path2sword,SWORDv=16){
+    file<-h5file(paste0(path2sword,'/',cont,'_sword_v',SWORDv,'.nc'))
+    x<-file[["nodes/x"]][]
+    y<-file[["nodes/y"]][]
+    width<-file[["nodes/width"]][]
+    reach_id<-file[["nodes/reach_id"]][]
+    node_id<-file[["nodes/node_id"]][]
+    wse<-file[["nodes/wse"]][]
+    rivername<-file[["nodes/river_name"]][]
+    dist<-file[["nodes/dist_out"]][]
+    out<-data.frame(reachID=reach_id,nodeID=node_id,x=x,y=y,width=width,wse=wse,dist=dist,rivername=rivername)
+    sqlitefile<-paste0(cont,'.sqlite')
+    mydb <- dbConnect(RSQLite::SQLite(), sqlitefile)
+    tabname<-"nodeinfo"
+    dbWriteTable(mydb, tabname, out)
+    dbExecute(mydb, 'CREATE INDEX IF NOT EXISTS idx_nodeinfo_reachid ON nodeinfo(reachID)')
+    dbDisconnect(mydb)
+}
 
 
 assignPretty <- function(x,n){
@@ -70,10 +87,4 @@ keySAT<-data.frame(sat=c('C2L','C2S','C2I','SWOT','S3B','S6','SAL','IC2','S3A'),
 
 
 
-
-
-#buidSQliteDB(datadir,sqlitefile=NULL){
-
-
-#}
 
