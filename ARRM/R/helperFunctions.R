@@ -40,6 +40,7 @@ createBasinSQliteDB<-function(pathtodat,mybasin){
     mydb <- dbConnect(RSQLite::SQLite(), sqlitefile)
     tabname<-paste0("basin",mybasin)
     dbWriteTable(mydb, tabname, dat)
+    dbExecute(mydb, 'CREATE INDEX IF NOT EXISTS idx_basin_reachid ON basin(reachID)')
     dbDisconnect(mydb)
 }
 
@@ -59,19 +60,57 @@ getAltBasin<-function(myfiles,sat){
 
 
 getBasindat<-function(mybasin,pathtodat){
-    myfiles<-dir(paste0(pathtodat,'/',mybasin,'/IC2'),full.names=TRUE)
-    ice<-getAltBasin(myfiles,"IC2")
-    S3Afiles<-dir(paste0(pathtodat,'/',mybasin,'/S3A'),full.names=TRUE)
-    S3A<-getAltBasin(S3Afiles,"S3A")
-    S3Bfiles<-dir(paste0(pathtodat,'/',mybasin,'/S3B'),full.names=TRUE)
-    S3B<-getAltBasin(S3Bfiles,"S3B")
-    SALfiles<-dir(paste0(pathtodat,'/',mybasin,'/SAL'),full.names=TRUE)
-    SAL<-getAltBasin(SALfiles,"SAL")
-    C2files<-dir(paste0(pathtodat,'/',mybasin,'/C2E'),full.names=TRUE)
-    C2S<-getAltBasin(C2files,"C2S")
-    S6files<-dir(paste0(pathtodat,'/',mybasin,'/S6'),full.names=TRUE)
-    S6<-getAltBasin(S6files,"S6")
-    datt<-rbind(ice,S3A,S3B,SAL,S6,C2S)
+    satIC2<-paste0(pathtodat,'/',mybasin,'/IC2')
+    if(file.exists(satIC2)){
+        myfiles<-dir(paste0(pathtodat,'/',mybasin,'/IC2'),full.names=TRUE)
+        ice<-getAltBasin(myfiles,"IC2")
+    }else{
+        (cat('ICESat-2 data is not available\n'))
+    }
+    satS3A<-paste0(pathtodat,'/',mybasin,'/S3A')
+    
+    if(file.exists(satS3A)){
+        S3Afiles<-dir(paste0(pathtodat,'/',mybasin,'/S3A'),full.names=TRUE)
+        S3A<-getAltBasin(S3Afiles,"S3A")
+    }else{
+        (cat('S3A data is not available\n'))
+    }
+    satS3B<-paste0(pathtodat,'/',mybasin,'/S3B')
+    if(file.exists(satS3B)){
+        S3Bfiles<-dir(paste0(pathtodat,'/',mybasin,'/S3B'),full.names=TRUE)
+        S3B<-getAltBasin(S3Bfiles,"S3B")
+    }else{
+        (cat('S3B data is not available\n'))
+    }
+    satSAL<-paste0(pathtodat,'/',mybasin,'/SAL')
+    
+    if(file.exists(satSAL)){
+        SALfiles<-dir(paste0(pathtodat,'/',mybasin,'/SAL'),full.names=TRUE)
+        SAL<-getAltBasin(SALfiles,"SAL")
+    }else{
+        (cat('SARAL/AltiKa data is not available\n'))
+    }
+    satC2<-paste0(pathtodat,'/',mybasin,'/C2E')
+    if(file.exists(satC2)){
+        C2files<-dir(paste0(pathtodat,'/',mybasin,'/C2E'),full.names=TRUE)
+        C2S<-getAltBasin(C2files,"C2S")
+    }else{
+        (cat('Cryosat-2 data is not available\n'))
+    }
+    
+    satS6<-paste0(pathtodat,'/',mybasin,'/S6')
+    if(file.exists(satS6)){
+        S6files<-dir(paste0(pathtodat,'/',mybasin,'/S6'),full.names=TRUE)
+        S6<-getAltBasin(S6files,"S6")
+    }else{
+        (cat('S6 data is not available\n'))
+    }
+    datt <- rbind(if(exists("ice")) ice,
+                  if(exists("S3A")) S3A,
+                  if(exists("S3B")) S3B,
+                  if(exists("SAL")) SAL,
+                  if(exists("C2S")) C2S,
+                  if(exists("S6")) S6)
     datt
 }
 

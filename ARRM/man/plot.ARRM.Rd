@@ -4,7 +4,7 @@
 \alias{plot.ARRM}
 \title{Plot an object returned by the function riverReachTS()}
 \usage{
-\method{plot}{ARRM}(fit, dat = NULL)
+\method{plot}{ARRM}(fit, dat = NULL, doSave = FALSE, type = "F", ...)
 }
 \arguments{
 \item{fit}{Object returned by get.TS()}

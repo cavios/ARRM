@@ -201,6 +201,18 @@ getAltReaches<-function(dbfile,mybasin,myreaches,addFilter=FALSE,addBuffer=NULL,
 }
 
 
+getAltBasin<-function(dbfile,mybasin){
+    mydb <- dbConnect(RSQLite::SQLite(), dbfile)
+    myq<-paste0("SELECT * FROM basin",mybasin)
+    res <- dbSendQuery(mydb, myq)
+    out<-dbFetch(res)
+    dbClearResult(res)
+    dbDisconnect(mydb)
+    out
+    
+}
+
+
 
 
 

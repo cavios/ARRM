@@ -5,12 +5,25 @@
 \title{Extract nadir altimetry data from the Altimetry River Reach database (ARRD). This function requires
 access to a basin sqlite file. Basin sqlite files can be acessed from ...}
 \usage{
-getAltReaches(dbfile, mybasin, myreaches)
+getAltReaches(
+  dbfile,
+  mybasin,
+  myreaches,
+  addFilter = FALSE,
+  addBuffer = NULL,
+  removeNA = TRUE
+)
 }
 \arguments{
 \item{dbfile}{a particular basin sqlite file e.g. "7428.sqlite". The basin number is the HydroShed level 4 PFAF_ID}
 
 \item{mybasin}{HydroShed basin PFAF_ID (level 4)}
+
+\item{addFilter}{=FALSE, if TRUE only observation with a node distanstance smaller than the width of the river is returned}
+
+\item{addBuffer}{=NULL, if a value is specified only observation with a node distanstance smaller than the width of the river + (-) addBuffer is returned}
+
+\item{removeNA}{= TRUE, remove rows where the elevation is NA}
 
 \item{myReaches}{a vector with SWORD reach numbers}
 }
