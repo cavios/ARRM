@@ -38,7 +38,7 @@ createBasinSQliteDB<-function(pathtodat,mybasin){
     cat('Creating database, ..\n')
     sqlitefile<-paste0(mybasin,'.sqlite')
     mydb <- dbConnect(RSQLite::SQLite(), sqlitefile)
-    tabname<-paste0("basin",mybasin)
+    tabname<-paste0("basin")
     dbWriteTable(mydb, tabname, dat)
     dbExecute(mydb, 'CREATE INDEX IF NOT EXISTS idx_basin_reachid ON basin(reachID)')
     dbDisconnect(mydb)
@@ -90,10 +90,10 @@ getBasindat<-function(mybasin,pathtodat){
     }else{
         (cat('SARAL/AltiKa data is not available\n'))
     }
-    satC2<-paste0(pathtodat,'/',mybasin,'/C2E')
+    satC2<-paste0(pathtodat,'/',mybasin,'/C2')
     if(file.exists(satC2)){
-        C2files<-dir(paste0(pathtodat,'/',mybasin,'/C2E'),full.names=TRUE)
-        C2S<-getAltBasin(C2files,"C2S")
+        C2files<-dir(paste0(pathtodat,'/',mybasin,'/C2'),full.names=TRUE)
+        C2<-getAltBasin(C2files,"C2")
     }else{
         (cat('Cryosat-2 data is not available\n'))
     }
@@ -109,8 +109,12 @@ getBasindat<-function(mybasin,pathtodat){
                   if(exists("S3A")) S3A,
                   if(exists("S3B")) S3B,
                   if(exists("SAL")) SAL,
-                  if(exists("C2S")) C2S,
+                  if(exists("C2")) C2,
                   if(exists("S6")) S6)
+    #if(rmNA){
+    #    id<-which(!is.na(datt$height))
+    #    datt<-datt[id,]
+    #}
     datt
 }
 
@@ -118,10 +122,10 @@ getBasindat<-function(mybasin,pathtodat){
 
 
 
-keySAT<-data.frame(sat=c('C2L','C2S','C2I','SWOT','S3B','S6','SAL','IC2','S3A'),
-                   height=c(5,5,5,6,6,5,5,5,6),
-                   satid=c(1,2,3,4,5,6,7,8,9),
-                   mycol=c('orchid','coral','deeppink1','darkolivegreen3','springgreen2','blue4','deepskyblue1','red3','black')
+keySAT<-data.frame(sat=c('C2','SWOT','S3B','S6','SAL','IC2','S3A'),
+                   height=c(5,6,6,5,5,5,6),
+                   satid=c(1,2,3,4,5,6,7),
+                   mycol=c('deeppink1','darkolivegreen3','springgreen2','blue4','deepskyblue1','red3','black')
 )
 
 

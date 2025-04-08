@@ -35,7 +35,7 @@ f<-function(param){
     REPORT(pred)
     REPORT(predsd)
     REPORT(cumExpMu)
-    REPORT(eta)
+    REPORT(v)
     
     
     tsVS=eta[,gid[1]]
@@ -57,7 +57,7 @@ f<-function(param){
 ##' fit<-riverReachTS(dat)
 ##' @export
 
-riverReachTS<-function(dat, VS=NULL,tdim=NULL,xdim=20,Nknot=10,nit=5,cutp=0.05 ){
+riverReachTS<-function(dat, VS=NULL,tdim=NULL,xdim=20,Nknot=10,nit=5,cutp=0.05){
 
 #prepare data
     dis<- round(diff(range(dat$chainage)))
@@ -71,7 +71,7 @@ riverReachTS<-function(dat, VS=NULL,tdim=NULL,xdim=20,Nknot=10,nit=5,cutp=0.05 )
         tdim<-round(diff(range(dat$time))*365/mtime,0)
     }
     if(is.null(VS)){
-        VS<-diff(range(dato$dist))/2
+        VS<-diff(range(dato$chainage))/2
     }
     
 
@@ -113,6 +113,7 @@ riverReachTS<-function(dat, VS=NULL,tdim=NULL,xdim=20,Nknot=10,nit=5,cutp=0.05 )
     
     allnll<-numeric(nit)
     obj <- MakeADFun(f,param,random=c("eta"), inner.control = list(maxit = 100),ridge.correct = FALSE,silent=TRUE)
+    #obj <- MakeADFun(f,param,random=c("eta"), inner.control = list(maxit = 100),ridge.correct = FALSE,silent=TRUE,map=list(logSdEta=as.factor(NA)))
     opt<-nlminb(obj$par, obj$fn, obj$gr, control=list(eval.max=5000, iter.max=5000))
     
     allnll[1]<-opt$objective
@@ -141,6 +142,7 @@ riverReachTS<-function(dat, VS=NULL,tdim=NULL,xdim=20,Nknot=10,nit=5,cutp=0.05 )
     time<-tidx$xx
     pl<-as.list(rep, "Est")
     plsd<-as.list(rep, "Std")
+    v<-obj$report()$v
     
     ts<-as.list(rep,"Est",report=TRUE)$tsVS
     tssd<-as.list(rep,"Std",report=TRUE)$tsVS
@@ -148,8 +150,9 @@ riverReachTS<-function(dat, VS=NULL,tdim=NULL,xdim=20,Nknot=10,nit=5,cutp=0.05 )
     slope[1]<-pl$mu[1]
     slope<-cumsum(slope)
 
+    myslope<-data.frame(x=xknot,y=slope) 
     myts<-data.frame(time=y,H=ts,Hsd=tssd)
-    out<-list(x=x,y=y,eta=pl$eta,etasd=plsd$eta,tsVS=myts)
+    out<-list(x=x,y=y,eta=pl$eta,etasd=plsd$eta,tsVS=myts, slope=myslope,opt=opt,v=v)
     class(out)<-"ARRM"
     return(out)
 }

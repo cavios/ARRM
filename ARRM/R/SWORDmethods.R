@@ -211,8 +211,10 @@ getReachInfo<-function(thisreach,path2sword,SWORDv){
         wse<-file[["nodes/wse"]][id]
         rivername<-file[["nodes/river_name"]][id]
         dist<-file[["nodes/dist_out"]][id]
+        patho<-file[["nodes/path_order"]][id]
+        paths<-file[["nodes/path_segs"]][id]
 
-        out<-data.frame(reachID=reach_id,x=x,y=y,nodeID=node_id,dist=dist,name=rivername,wse=wse)
+        out<-data.frame(reachID=reach_id,x=x,y=y,nodeID=node_id,dist=dist,name=rivername,wse=wse,width=width,patho=patho,paths=paths)
     }
     h5close(file)
     out
@@ -236,9 +238,9 @@ getReachInfoDB<-function(thisreach,dbfile,myreach){
 }
 
 
-getReachInfo2<-function(dbfile,mybasin,myreaches,addFilter=FALSE,addBuffer=NULL,removeNA=TRUE){
+getReachInfo2<-function(dbfile,myreaches,addFilter=FALSE,addBuffer=NULL,removeNA=TRUE){
     mydb <- dbConnect(RSQLite::SQLite(), dbfile)
-    out<-lapply(1:length(myreaches),function(i){cat('doing ',i,'\n');getOneReach(mydb,myreaches[i],mybasin)})
+    out<-lapply(1:length(myreaches),function(i){cat('doing ',i,'\n');getOneReach(mydb,myreaches[i])})
     out<-do.call(rbind,out)
     dbDisconnect(mydb)
     if(removeNA){
@@ -254,11 +256,6 @@ getReachInfo2<-function(dbfile,mybasin,myreaches,addFilter=FALSE,addBuffer=NULL,
     }
     out
 }
-
-
-
-
-
 
 
 ##' Extract upstream and downstream reach id from the SWORD database (Alteneau et al., 2021) for a specific reach
@@ -305,13 +302,42 @@ getNeighborReach<-function(thisreach,path2sword,SWORDv){
 ##' out<-extractCL(myreaches,path2sword,SWORDv)
 ##' @export
 
-extractCL<-function(myreaches,path2sword,SWORDv){
+extractCL<-function(myreaches,path2sword,SWORDv,fix=FALSE,addChain=FALSE){
     o<-order(myreaches)
     out<-lapply(1:length(myreaches),function(i)getReachInfo(myreaches[o[i]],path2sword,SWORDv))
     out<-do.call(rbind,out)
-    out<-fixCL(out,lim=300)
+    o<-order(out$dist)
+    out<-out[o,]
+    if(out$wse[1] > out$wse[nrow(out)]) out<-out[nrow(out):1,]
     
-   out
+    if(length(myreaches)> 1 & fix==TRUE){
+        out<-fixCL(out,lim=300)
+    }
+    if(addChain){
+
+        centerLineLL<-cbind(out$x,out$y)
+   #transform data to UTM coordinates
+        myProj<-getProjUTM(centerLineLL[,1], centerLineLL[,2])
+        vv <- vect(as.matrix(centerLineLL), crs="+proj=longlat")
+        uu <- terra::project(vv, myProj)
+        xy2 <- crds(uu)
+        xy<-xy2[!duplicated(xy2),]
+    
+    
+# calculate length of line segments of centerLine
+        NP<-nrow(xy)
+        BeginPx<-xy[1:(NP-1),1]
+        BeginPy<-xy[1:(NP-1),2]
+        begin<-cbind(BeginPx,BeginPy)
+        EndPx<-xy[2:NP,1]
+        EndPy<-xy[2:NP,2]
+        end<-cbind(EndPx,EndPy)
+
+        lineSegLength<-sqrt((EndPx-BeginPx)^2+(EndPy-BeginPy)^2) 
+        chainage<-c(0,cumsum(lineSegLength))
+        out<-cbind(out,chainage)
+    }
+    out
 }
 
 
@@ -322,6 +348,23 @@ extractCLDB<-function(myreaches,dbfile,lim=300){
     out<-fixCL(out,lim=lim)
     out
 }
+
+
+getPathsReach<-function(area,thishydro,thispaths,path2sword,SWORDv){
+    cont<-getSWORDcode(area)     
+    file<-h5file(paste0(path2sword,'/',cont,'_sword_v',SWORDv,'.nc'))
+    paths<-file[["reaches/path_segs"]][]
+    hydro<-file[["reaches/reach_id"]][]
+    hydro2<-substr(as.character(hydro),1,2)
+    id<-which(paths==thispaths & hydro2==thishydro)
+    reachID<-file[["reaches/reach_id"]][id]
+    length<-file[["reaches/reach_length"]][id]
+    obstr<-file[["reaches/obstr_type"]][id]
+    out<-data.frame(reachID=reachID,length=length,obstr=obstr)
+    h5close(file)
+    return(out)
+}
+
 
 
 

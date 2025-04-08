@@ -12,7 +12,7 @@ all:
 	make install
 	make pdf
 #
-doc-update: $(PACKAGE)/R/*.R
+doc-update: $(PACKAGE)/R/*.R $(PACKAGE)/DESCRIPTION
 	echo "library(roxygen2);roxygenize(\"$(PACKAGE)\")" | $(R) --slave
 	@touch doc-update
 
@@ -30,6 +30,9 @@ install: $(TARBALL)
 	@touch install
 
 pdf: $(PACKAGE).pdf
-$(PACKAGE).pdf: $(PACKAGE)/man/*.Rd
+$(PACKAGE).pdf: $(PACKAGE)/man/*.Rd $(PACKAGE)/DESCRIPTION
 	rm -f $(PACKAGE).pdf
 	$(R) CMD Rd2pdf --no-preview $(PACKAGE)
+
+clean:
+	\rm -f install doc-update $(PACKAGE)_* $(PACKAGE).pdf 

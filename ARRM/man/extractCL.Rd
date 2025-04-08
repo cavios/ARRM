@@ -5,7 +5,7 @@
 \title{Extract node information from the SWORD database (Alteneau et al., 2021) for multiple reaches and reorders the nodes from downstrean to upstream if these are ordered wrongly
 Important the function requires the SWORD database! If you do not have this please download from https://www.swordexplorer.com}
 \usage{
-extractCL(myreaches, path2sword, SWORDv)
+extractCL(myreaches, path2sword, SWORDv, fix = FALSE, addChain = FALSE)
 }
 \arguments{
 \item{path2sword}{Path to the location of the SWORD database}

@@ -156,8 +156,8 @@ addChainage<-function(dat,centerline){
 
 
 
-getOneReach<-function(mydb,myreach,mybasin){
-    myq<-paste0("SELECT * FROM basin",mybasin," WHERE reachID =" ,myreach)
+getOneReach<-function(mydb,myreach){
+    myq<-paste0("SELECT * FROM basin WHERE reachID =" ,myreach)
     res <- dbSendQuery(mydb, myq)
     out<-dbFetch(res)
     dbClearResult(res)
@@ -167,7 +167,6 @@ getOneReach<-function(mydb,myreach,mybasin){
 ##' Extract nadir altimetry data from the Altimetry River Reach database (ARRD). This function requires
 ##' access to a basin sqlite file. Basin sqlite files can be acessed from ...  
 ##' @param dbfile a particular basin sqlite file e.g. "7428.sqlite". The basin number is the HydroShed level 4 PFAF_ID 
-##' @param mybasin HydroShed basin PFAF_ID (level 4) 
 ##' @param myReaches a vector with SWORD reach numbers
 ##' @param addFilter =FALSE, if TRUE only observation with a node distanstance smaller than the width of the river is returned
 ##' @param addBuffer =NULL, if a value is specified only observation with a node distanstance smaller than the width of the river + (-) addBuffer is returned
@@ -183,7 +182,7 @@ getOneReach<-function(mydb,myreach,mybasin){
 
 getAltReaches<-function(dbfile,mybasin,myreaches,addFilter=FALSE,addBuffer=NULL,removeNA=TRUE){
     mydb <- dbConnect(RSQLite::SQLite(), dbfile)
-    out<-lapply(1:length(myreaches),function(i){cat('doing ',i,'\n');getOneReach(mydb,myreaches[i],mybasin)})
+    out<-lapply(1:length(myreaches),function(i){cat('doing ',i,'\n');getOneReach(mydb,myreaches[i])})
     out<-do.call(rbind,out)
     dbDisconnect(mydb)
     if(removeNA){
