@@ -274,7 +274,7 @@ getRiverSP<-function(node,start,end){
     ans <- fromJSON(content(out,"text"),flatten=TRUE)
     res<-as.data.frame(ans$results$geojson$features[,3:10])
     names(res)<-c("node_id","reach_id","time_str","wse","lat","lon","dark_frac","xovr_cal_q")
-    id<-which(res$wse > -9999999)
+    id<-which(res$time_str!="no_data")
     res<-res[id,]
     res
 }
