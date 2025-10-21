@@ -172,12 +172,19 @@ getStart<-function(tt){
 
 
 
-getSWORDcode<-function(myarea){
+getSWORDcode<-function(myarea,cap=FALSE){
+    if(cap){
+        keySWOT<-data.frame(code=c('1','2','3','4','5','6','7','8','9'),
+                            cont=c('AF','EU','AS','AS','OC','SA','NA','NA','NA'))
+        }else{
     keySWOT<-data.frame(code=c('1','2','3','4','5','6','7','8','9'),
                         cont=c('af','eu','as','as','oc','sa','na','na','na'))
+    }
     idc<-which(keySWOT$code==myarea)
     cont<-keySWOT$cont[idc]
 }
+
+
 
 
 
@@ -218,6 +225,68 @@ getReachInfo<-function(thisreach,path2sword,SWORDv){
     }
     h5close(file)
     out
+}
+
+
+
+
+
+getReachInfo16<-function(thisreach,path2sword,SWORDv){
+    area<-substr(as.character(thisreach),1,1)
+    cont<-getSWORDcode(area)     
+    file<-h5file(paste0(path2sword,'/',cont,'_sword_v',SWORDv,'.nc'))
+    reaches<-file[["nodes/reach_id"]][]
+    id<-which(reaches==thisreach)
+    out<-NULL
+    if(length(id)>0){
+        x<-file[["nodes/x"]][id]
+        y<-file[["nodes/y"]][id]
+        width<-file[["nodes/width"]][id]
+        reach_id<-file[["nodes/reach_id"]][id]
+        node_id<-file[["nodes/node_id"]][id]
+        wse<-file[["nodes/wse"]][id]
+        rivername<-file[["nodes/river_name"]][id]
+        dist<-file[["nodes/dist_out"]][id]
+
+        out<-data.frame(reachID=reach_id,x=x,y=y,nodeID=node_id,dist=dist,name=rivername,wse=wse,width=width)
+    }
+    h5close(file)
+    out
+}
+
+
+
+
+##' Extract RiverSP (version C) node data from Hydrocon (DOI: 10.5281/zenodo.11176233.)
+##' More information about Hydrocon is found here https://podaac.github.io/hydrocron/intro.html 
+##' @param node node id from the SWORD database (v16) 
+##' @param start start time in the format "2023-01-25T00:00:00Z" 
+##' @param end end time "2025-01-25T00:00:00Z"
+##' @importFrom httr GET content
+##' @importFrom jsonlite fromJSON
+##' @export
+
+
+getRiverSP<-function(node,start,end){
+    link <- paste0("https://soto.podaac.earthdatacloud.nasa.gov/hydrocron/v1/timeseries?feature=Node&feature_id=",node,"&start_time=",start,"&end_time=",end,"&output=geojson&fields=node_id,reach_id,time_str,wse,lat,lon,dark_frac,xovr_cal_q")
+
+    out<-GET(link) 
+    ans <- fromJSON(content(out,"text"),flatten=TRUE)
+    res<-as.data.frame(ans$results$geojson$features[,3:10])
+    names(res)<-c("node_id","reach_id","time_str","wse","lat","lon","dark_frac","xovr_cal_q")
+    id<-which(res$wse > -9999999)
+    res<-res[id,]
+    res
+}
+
+reach17toreach16<-function(reaches17,path2transfile){
+    area<-unique(substr(reaches17,1,1))
+    cont<-getSWORDcode(area,cap=TRUE)
+    transfile<-paste0(path2transfile,'/',cont,'_ReachIDs_v17_vs_v16.csv')
+    tt<-read.csv(transfile)
+    tid<-match(reaches17,tt$v17_reach_id)
+    reaches16<-tt$v16_reach_id[tid]
+    reaches16
 }
 
 
@@ -326,16 +395,20 @@ extractCL<-function(myreaches,path2sword,SWORDv,fix=FALSE,addChain=FALSE){
     
 # calculate length of line segments of centerLine
         NP<-nrow(xy)
-        BeginPx<-xy[1:(NP-1),1]
-        BeginPy<-xy[1:(NP-1),2]
-        begin<-cbind(BeginPx,BeginPy)
-        EndPx<-xy[2:NP,1]
-        EndPy<-xy[2:NP,2]
-        end<-cbind(EndPx,EndPy)
+        if(NP > 1){
+            BeginPx<-xy[1:(NP-1),1,drop=FALSE]
+            BeginPy<-xy[1:(NP-1),2,drop=FALSE]
+            begin<-cbind(BeginPx,BeginPy)
+            EndPx<-xy[2:NP,1,drop=FALSE]
+            EndPy<-xy[2:NP,2,drop=FALSE]
+            end<-cbind(EndPx,EndPy)
 
-        lineSegLength<-sqrt((EndPx-BeginPx)^2+(EndPy-BeginPy)^2) 
-        chainage<-c(0,cumsum(lineSegLength))
-        out<-cbind(out,chainage)
+            lineSegLength<-sqrt((EndPx-BeginPx)^2+(EndPy-BeginPy)^2) 
+            chainage<-c(0,cumsum(lineSegLength))
+            out<-cbind(out,chainage)
+        }else{
+            out<-NULL
+        }
     }
     out
 }
@@ -357,6 +430,21 @@ getPathsReach<-function(area,thishydro,thispaths,path2sword,SWORDv){
     hydro<-file[["reaches/reach_id"]][]
     hydro2<-substr(as.character(hydro),1,2)
     id<-which(paths==thispaths & hydro2==thishydro)
+    reachID<-file[["reaches/reach_id"]][id]
+    length<-file[["reaches/reach_length"]][id]
+    obstr<-file[["reaches/obstr_type"]][id]
+    out<-data.frame(reachID=reachID,length=length,obstr=obstr)
+    h5close(file)
+    return(out)
+}
+
+getPathoReach<-function(area,thishydro,thispatho,path2sword,SWORDv){
+    cont<-getSWORDcode(area)     
+    file<-h5file(paste0(path2sword,'/',cont,'_sword_v',SWORDv,'.nc'))
+    patho<-file[["reaches/path_order"]][]
+    hydro<-file[["reaches/reach_id"]][]
+    hydro2<-substr(as.character(hydro),1,2)
+    id<-which(patho==thispatho & hydro2==thishydro)
     reachID<-file[["reaches/reach_id"]][id]
     length<-file[["reaches/reach_length"]][id]
     obstr<-file[["reaches/obstr_type"]][id]
